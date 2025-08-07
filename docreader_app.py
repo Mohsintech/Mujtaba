@@ -16,19 +16,51 @@ import time
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
-    nltk.download('punkt')
+    try:
+        nltk.download('punkt')
+    except:
+        pass
+
+try:
+    nltk.data.find('tokenizers/punkt_tab')
+except LookupError:
+    try:
+        nltk.download('punkt_tab')
+    except:
+        pass
 
 try:
     nltk.data.find('corpora/stopwords')
 except LookupError:
-    nltk.download('stopwords')
+    try:
+        nltk.download('stopwords')
+    except:
+        pass
 
 from nltk.corpus import stopwords
 from nltk.tokenize import sent_tokenize, word_tokenize
 
 class TextSummarizer:
     def __init__(self):
-        self.stop_words = set(stopwords.words('english'))
+        try:
+            self.stop_words = set(stopwords.words('english'))
+        except LookupError:
+            # Fallback stopwords list if NLTK stopwords are not available
+            self.stop_words = {
+                'i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your',
+                'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she',
+                'her', 'hers', 'herself', 'it', 'its', 'itself', 'they', 'them', 'their',
+                'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'this', 'that',
+                'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+                'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing', 'a', 'an',
+                'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of',
+                'at', 'by', 'for', 'with', 'through', 'during', 'before', 'after', 'above',
+                'below', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again',
+                'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how',
+                'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some',
+                'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too',
+                'very', 's', 't', 'can', 'will', 'just', 'don', 'should', 'now'
+            }
     
     def clean_text(self, text: str) -> str:
         """Clean and preprocess text"""
@@ -39,12 +71,21 @@ class TextSummarizer:
     
     def extract_sentences(self, text: str) -> List[str]:
         """Extract sentences from text"""
-        sentences = sent_tokenize(text)
+        try:
+            sentences = sent_tokenize(text)
+        except LookupError:
+            # Fallback to simple sentence splitting if NLTK tokenizer fails
+            sentences = re.split(r'[.!?]+', text)
         return [sent.strip() for sent in sentences if len(sent.strip()) > 10]
     
     def calculate_word_frequencies(self, text: str) -> dict:
         """Calculate word frequencies"""
-        words = word_tokenize(text.lower())
+        try:
+            words = word_tokenize(text.lower())
+        except LookupError:
+            # Fallback to simple word splitting if NLTK tokenizer fails
+            words = re.findall(r'\b\w+\b', text.lower())
+        
         words = [word for word in words if word.isalnum() and word not in self.stop_words]
         return Counter(words)
     
@@ -53,7 +94,11 @@ class TextSummarizer:
         sentence_scores = defaultdict(float)
         
         for i, sentence in enumerate(sentences):
-            words = word_tokenize(sentence.lower())
+            try:
+                words = word_tokenize(sentence.lower())
+            except LookupError:
+                words = re.findall(r'\b\w+\b', sentence.lower())
+            
             word_count = len([word for word in words if word.isalnum()])
             
             if word_count == 0:
@@ -119,7 +164,10 @@ class TextSummarizer:
         # Find sentences with most important words
         key_sentences = []
         for sentence in sentences[:10]:  # Look at first 10 sentences
-            words = word_tokenize(sentence.lower())
+            try:
+                words = word_tokenize(sentence.lower())
+            except LookupError:
+                words = re.findall(r'\b\w+\b', sentence.lower())
             importance_score = sum(1 for word in words if word in important_words)
             key_sentences.append((importance_score, sentence))
         
